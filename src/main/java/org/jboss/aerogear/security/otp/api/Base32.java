@@ -59,7 +59,7 @@ public class Base32 {
 
     static final String SEPARATOR = "-";
 
-    protected Base32(String alphabet) {
+    public Base32(String alphabet) {
         this.ALPHABET = alphabet;
         DIGITS = ALPHABET.toCharArray();
         MASK = DIGITS.length - 1;
@@ -74,7 +74,7 @@ public class Base32 {
         return getInstance().decodeInternal(encoded);
     }
 
-    protected byte[] decodeInternal(String encoded) throws DecodingException {
+    public byte[] decodeInternal(String encoded) throws DecodingException {
         // Remove whitespace and separators
         encoded = encoded.trim().replaceAll(SEPARATOR, "").replaceAll(" ", "");
 

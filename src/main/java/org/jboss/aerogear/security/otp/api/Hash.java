@@ -19,7 +19,11 @@ package org.jboss.aerogear.security.otp.api;
 
 public enum Hash {
 
-    SHA1("HMACSHA1");
+	MD4("MD4"),
+	MD5("MD5"),
+    SHA1("SHA1"),
+    SHA256("SHA256"),
+    SHA512("SHA512");
 
     private String hash;
 

@@ -17,15 +17,17 @@
 
 package org.jboss.aerogear.security.otp.api;
 
+import java.nio.ByteBuffer;
+
 import org.junit.Test;
 
 import static junit.framework.Assert.assertEquals;
 
 public class HmacTest {
-
     @Test
     public void testDigest() throws Exception {
-        byte[] hash = new Hmac(Hash.SHA1, Base32.decode(Base32.random()), new Clock().getCurrentInterval()).digest();
+    	byte[] challenge = ByteBuffer.allocate(8).putLong(new Clock().getCurrentInterval()).array();
+        byte[] hash = new Hmac(Hash.SHA1, Base32.decode(Base32.random())).digest(challenge);
         assertEquals(20, hash.length);
     }
 }

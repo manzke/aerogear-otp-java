@@ -52,4 +52,12 @@ public class ClockTest {
         final long interval = 45201600L;
         assertEquals(interval, clock.getCurrentInterval());
     }
+    
+    public static void main(String[] args) throws Exception {
+    	Clock c = new Clock();
+		while(true){
+			System.out.println(c.getCurrentInterval());
+			Thread.sleep(1000);
+		}
+	}
 }

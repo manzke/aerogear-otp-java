@@ -70,6 +70,31 @@ public class MotpTest {
         String otp = motp.now();
         assertTrue("OTP is not valid", motp.verify(otp));
     }
+    
+    @Test
+    public void testExpectedOtpWith16Secret() throws Exception {
+    	String secret = "31740cc7f06a10e3";
+    	String expectedOtp = "6f9edf";
+    	when(clock.getCurrentSeconds()).thenReturn(1356021826l);
+        motp = new Motp(pin, secret, clock);
+        String otp = motp.now();
+        
+        assertEquals("OTP is not the expected one", expectedOtp, otp);
+        assertTrue("OTP is not valid", motp.verify(otp));
+    }
+    
+    @Test
+    public void testExpectedOtpWith32Secret() throws Exception {
+    	String secret = "cc61e14886870231f8fecdeb517bfa50";
+    	String expectedOtp = "500bdb";
+    	
+    	when(clock.getCurrentSeconds()).thenReturn(1356022055l);
+        motp = new Motp(pin, secret, clock);
+        String otp = motp.now();
+        assertEquals("OTP is not the expected one", expectedOtp, otp);
+        assertTrue("OTP is not valid", motp.verify(otp));
+    }
+
 
     @Test
     public void testOtpAfter10seconds() throws Exception {

@@ -21,17 +21,20 @@ import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-import org.apache.commons.codec.binary.Hex;
 import org.jboss.aerogear.security.otp.api.Clock;
+import org.jboss.aerogear.security.otp.api.Hash;
+import org.jboss.aerogear.security.otp.api.Hex;
 
 /**
  * @author Daniel Manzke
  */
-public class Motp {
+public class Motp implements Otp {
 
     private final String secret;
     private final Clock clock;
 	private final String pin;
+	private final Hash hash;
+	private final int delayWindow;
     private static final int DEFAULT_DELAY_WINDOW = 3; //latest 60 seconds -> motp.sourceforge.net tells 3 minutes past/future
 
     /**
@@ -40,9 +43,7 @@ public class Motp {
      * @param secret Shared secret
      */
     public Motp(String pin, String secret) {
-        this.pin = pin;
-        this.secret = secret;
-        clock = new Clock();
+    	this(pin, secret, new Clock());
     }
 
     /**
@@ -52,10 +53,17 @@ public class Motp {
      * @param clock  Clock responsible for retrieve the current interval
      */
     public Motp(String pin, String secret, Clock clock) {
-    	this.pin = pin;
-    	this.secret = secret;
-        this.clock = clock;
+    	this((MotpConfig) new MotpConfig().pin(pin).secret(secret).clock(clock));
     }
+    
+    public Motp(MotpConfig config){
+    	this.secret = config.secret;
+    	this.clock = config.clock;
+    	this.hash = config.hash;
+    	this.pin = config.pin;
+    	this.delayWindow = DEFAULT_DELAY_WINDOW;
+    }
+
 
     /**
      * Retrieves the current OTP
@@ -64,8 +72,8 @@ public class Motp {
      * @throws NoSuchAlgorithmException 
      * @throws UnsupportedEncodingException 
      */
-    public String now() throws NoSuchAlgorithmException, UnsupportedEncodingException {
-    	return generate(this.pin, this.secret, clock.getCurrentSeconds());
+    public String now() {
+    	return generate(clock.getCurrentSeconds());
     }
 
     /**
@@ -84,16 +92,12 @@ public class Motp {
      *         Author: sweis@google.com (Steve Weis)
      */
     public boolean verify(String otp) {
-        return verify(otp, DEFAULT_DELAY_WINDOW);
-    }
-    
-    public boolean verify(String otp, int delayWindow) {
         long currentSeconds = clock.getCurrentSeconds();
 
         int pastResponse = Math.max(delayWindow, 0) * 10;
 
         for (int i = pastResponse; i >= 0; i = i - 10) {
-            String candidate = generate(this.pin, this.secret, currentSeconds - i);
+            String candidate = generate(currentSeconds - i);
             if (otp.equalsIgnoreCase(candidate)) {
                 return true;
             }
@@ -102,25 +106,46 @@ public class Motp {
         return false;
     }
     
-    private String generate(String pin, String secret, long epoch){
-    	return hash(pin, secret, epoch).substring(0,6);
-    }
-
-    private String hash(String pin, String secret, long epoch) {
-    	String hash;
+    private String generate(long epoch) {
     	try {
 			String base = Long.toString(epoch / 10) + secret + pin;
-			MessageDigest digest = MessageDigest.getInstance("MD5");
+			MessageDigest digest = MessageDigest.getInstance(hash.toString());
 			byte[] bytes = digest.digest(base.getBytes("UTF-8"));
 			
-			return Hex.encodeHexString(bytes);
+			return Hex.encode(bytes).substring(0,6);
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
-			hash = "";
+			return "";
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
-			hash = "";
+			return "";
 		}
-    	return hash;
     }
+    
+    public static MotpConfig configure(String secret, String pin){
+    	return new MotpConfig().pin(pin).secret(secret);
+    }
+    
+	public static class MotpConfig extends Config<Motp, MotpConfig> {
+		private String pin;
+		protected MotpConfig() {
+			super();
+			this.hash = Hash.MD5;
+			this.clock = new Clock();
+		}
+		
+		public MotpConfig pin(String pin){
+			this.pin = pin;
+			return this;
+		}
+		
+		@Override
+		public MotpConfig self() {
+			return this;
+		}
+		
+		public Motp build(){
+			return new Motp(this);
+		}
+	}
 }

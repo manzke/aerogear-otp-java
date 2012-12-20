@@ -1,183 +1,178 @@
-/*
- * JBoss, Home of Professional Open Source
- * Copyright 2012, Red Hat, Inc., and individual contributors
- * by the @authors tag. See the copyright.txt in the distribution for a
- * full listing of individual contributors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.jboss.aerogear.security.otp;
 
+import static junit.framework.Assert.assertEquals;
+import static org.mockito.Mockito.when;
+
+import org.jboss.aerogear.security.otp.Otp.Config;
+import org.jboss.aerogear.security.otp.Totp.TotpConfig;
 import org.jboss.aerogear.security.otp.api.Clock;
+import org.jboss.aerogear.security.otp.api.Digits;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.Calendar;
-import java.util.GregorianCalendar;
-import java.util.TimeZone;
-import java.util.logging.Logger;
-
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.when;
-
 public class TotpTest {
-
-    private final static Logger LOGGER = Logger.getLogger(TotpTest.class.getName());
-
     @Mock
     private Clock clock;
-    private Totp totp;
-    private String sharedSecret = "B2374TNIQ3HKC446";
+    private TotpConfig config;
+    
+    public static final String key20 = "12345678901234567890";
+    public static final String key32 = key20 + "123456789012";
+    public static final String key64 = key20 + key20 + key20 + "1234";
 
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(0));
-        totp = new Totp(sharedSecret, clock);
+        config = Config.type(TotpConfig.class).clock(clock).digits(Digits.EIGHT);
     }
-
-    private long addElapsedTime(int seconds) {
-        Calendar calendar = GregorianCalendar.getInstance(TimeZone.getTimeZone("UTC"));
-        LOGGER.info("Current time: " + calendar.getTime());
-        calendar.add(Calendar.SECOND, seconds);
-        LOGGER.info("Updated time (+" + seconds + "): " + calendar.getTime());
-        long currentTimeSeconds = calendar.getTimeInMillis() / 1000;
-        return currentTimeSeconds / 30;
+    
+    private void setTimeTo(long milliseconds) {
+    	when(clock.getCurrentInterval()).thenReturn(milliseconds / 1000 / 30);
     }
-
+    
     @Test
-    public void testUri() throws Exception {
-        String name = "john";
-        String url = String.format("otpauth://totp/%s?secret=%s", name, sharedSecret);
-        assertEquals(url, totp.uri("john"));
+    public void testKey20Time1() throws Exception {
+    	setTimeTo(59000L);
+        Totp totp = config.secret(key20).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "94287082", token);
     }
-
+    
     @Test
-    public void testUriEncoding() {
-        Totp totp = new Totp(sharedSecret);
-        String url = String.format("otpauth://totp/%s?secret=%s", "john%23doe", sharedSecret);
-        assertEquals(url, totp.uri("john#doe"));
+    public void testKey20Time2() throws Exception {
+    	setTimeTo(1111111109000l);
+        Totp totp = config.secret(key20).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "07081804", token);
     }
-
+    
     @Test
-    public void testLeadingZeros() throws Exception {
-        final String expected = "002941";
-
-        when(clock.getCurrentInterval()).thenReturn(45187109L);
-        String secret = "R5MB5FAQNX5UIPWL";
-
-        Totp totp = new Totp(secret, clock);
-        String otp = totp.now();
-        assertEquals("Generated token must be zero padded", otp, expected);
-        assertTrue("Generated token must be valid", totp.verify(otp));
+    public void testKey20Time3() throws Exception {
+    	setTimeTo(1111111111000l);
+        Totp totp = config.secret(key20).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "14050471", token);
     }
-
+    
     @Test
-    public void testNow() throws Exception {
-        String otp = totp.now();
-        assertEquals(6, otp.length());
+    public void testKey20Time4() throws Exception {
+    	setTimeTo(1234567890000l);
+        Totp totp = config.secret(key20).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "89005924", token);
     }
-
+    
     @Test
-    public void testValidOtp() throws Exception {
-        String otp = totp.now();
-        assertTrue("OTP is not valid", totp.verify(otp));
+    public void testKey20Time5() throws Exception {
+    	setTimeTo(2000000000000l);
+        Totp totp = config.secret(key20).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "69279037", token);
     }
-
+    
     @Test
-    public void testOtpAfter10seconds() throws Exception {
-        String otp = totp.now();
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(10));
-        assertTrue("OTP should be valid", totp.verify(otp));
+    public void testKey20Time6() throws Exception {
+    	setTimeTo(20000000000000l);
+        Totp totp = config.secret(key20).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "65353130", token);
     }
-
+    
     @Test
-    public void testOtpAfter20seconds() throws Exception {
-        String otp = totp.now();
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(20));
-        assertTrue("OTP should be valid", totp.verify(otp));
+    public void testKey32Time1() throws Exception {
+    	setTimeTo(59000L);
+        Totp totp = config.secret(key32).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "46119246", token);
     }
-
+    
     @Test
-    public void testOtpAfter25seconds() throws Exception {
-        String otp = totp.now();
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(25));
-        assertTrue("OTP should be valid", totp.verify(otp));
+    public void testKey32Time2() throws Exception {
+    	setTimeTo(1111111109000l);
+        Totp totp = config.secret(key32).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "68084774", token);
     }
-
+    
     @Test
-    public void testOtpAfter30seconds() throws Exception {
-        String otp = totp.now();
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(30));
-        assertTrue("OTP should be valid", totp.verify(otp));
+    public void testKey32Time3() throws Exception {
+    	setTimeTo(1111111111000l);
+        Totp totp = config.secret(key32).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "67062674", token);
     }
-
+    
     @Test
-    public void testOtpAfter31seconds() throws Exception {
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(0) - 1);
-        String otp = totp.now();
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(31));
-        assertFalse("OTP should be invalid", totp.verify(otp));
+    public void testKey32Time4() throws Exception {
+    	setTimeTo(1234567890000l);
+        Totp totp = config.secret(key32).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "91819424", token);
     }
-
+    
     @Test
-    public void testOtpAfter32seconds() throws Exception {
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(0) - 1);
-        String otp = totp.now();
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(31));
-        assertFalse("OTP should be invalid", totp.verify(otp));
+    public void testKey32Time5() throws Exception {
+    	setTimeTo(2000000000000l);
+        Totp totp = config.secret(key32).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "90698825", token);
     }
-
+    
     @Test
-    public void testOtpAfter40seconds() throws Exception {
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(0) - 1);
-        String otp = totp.now();
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(40));
-        assertFalse("OTP should be invalid", totp.verify(otp));
+    public void testKey32Time6() throws Exception {
+    	setTimeTo(20000000000000l);
+        Totp totp = config.secret(key32).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "77737706", token);
     }
-
+    
+    
     @Test
-    public void testOtpAfter50seconds() throws Exception {
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(0) - 1);
-        String otp = totp.now();
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(50));
-        assertFalse("OTP should be invalid", totp.verify(otp));
+    public void testKey64Time1() throws Exception {
+    	setTimeTo(59000L);
+        Totp totp = config.secret(key64).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "90693936", token);
     }
-
+    
     @Test
-    public void testOtpAfter59seconds() throws Exception {
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(0) - 1);
-        String otp = totp.now();
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(59));
-        assertFalse("OTP should be invalid", totp.verify(otp));
+    public void testKey64Time2() throws Exception {
+    	setTimeTo(1111111109000l);
+        Totp totp = config.secret(key64).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "25091201", token);
     }
-
+    
     @Test
-    public void testOtpAfter60seconds() throws Exception {
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(0) - 1);
-        String otp = totp.now();
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(60));
-        assertFalse("OTP should be invalid", totp.verify(otp));
+    public void testKey64Time3() throws Exception {
+    	setTimeTo(1111111111000l);
+        Totp totp = config.secret(key64).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "99943326", token);
     }
-
+    
     @Test
-    public void testOtpAfter61seconds() throws Exception {
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(0) - 1);
-        String otp = totp.now();
-        when(clock.getCurrentInterval()).thenReturn(addElapsedTime(61));
-        assertFalse("OTP should be invalid", totp.verify(otp));
+    public void testKey64Time4() throws Exception {
+    	setTimeTo(1234567890000l);
+        Totp totp = config.secret(key64).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "93441116", token);
+    }
+    
+    @Test
+    public void testKey64Time5() throws Exception {
+    	setTimeTo(2000000000000l);
+        Totp totp = config.secret(key64).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "38618901", token);
+    }
+    
+    @Test
+    public void testKey64Time6() throws Exception {
+    	setTimeTo(20000000000000l);
+        Totp totp = config.secret(key64).build();
+        String token = totp.now();
+        assertEquals("token doesn't match", "47863826", token);
     }
 }

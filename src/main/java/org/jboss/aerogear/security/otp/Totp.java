@@ -1,148 +1,110 @@
-/*
- * JBoss, Home of Professional Open Source
- * Copyright 2012, Red Hat, Inc., and individual contributors
- * by the @authors tag. See the copyright.txt in the distribution for a
- * full listing of individual contributors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.jboss.aerogear.security.otp;
 
-import org.jboss.aerogear.security.otp.api.Base32;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.security.NoSuchAlgorithmException;
+
 import org.jboss.aerogear.security.otp.api.Clock;
 import org.jboss.aerogear.security.otp.api.Digits;
 import org.jboss.aerogear.security.otp.api.Hash;
 import org.jboss.aerogear.security.otp.api.Hmac;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
+import static org.jboss.aerogear.security.otp.api.Util.*;
 
-public class Totp {
-
-    private final String secret;
+/**
+ * @author Daniel Manzke
+ */
+public class Totp implements Otp {
+    private final byte[] key;
     private final Clock clock;
-    private static final int DELAY_WINDOW = 1;
-
-    /**
-     * Initialize an OTP instance with the shared secret generated on Registration process
-     *
-     * @param secret Shared secret
-     */
+    private final Digits digits;
+    private final Hash hash;
+    private final int delayWindow;
+    
+    private static final int DEFAULT_DELAY_WINDOW = 3;
+    
     public Totp(String secret) {
-        this.secret = secret;
-        clock = new Clock();
+    	this.key = secret.getBytes(Charset.forName("UTF-8"));
+        if (key.length == 20) this.hash = Hash.SHA1;
+        else if (key.length == 32) this.hash = Hash.SHA256;
+        else if (key.length == 64) this.hash = Hash.SHA512;
+        else throw new IllegalArgumentException("Key length not supported, use a key of size of 20, 32 or 64 bytes");
+        this.digits = Digits.EIGHT;
+        this.delayWindow = DEFAULT_DELAY_WINDOW;
+        this.clock = new Clock();
     }
 
-    /**
-     * Initialize an OTP instance with the shared secret generated on Registration process
-     *
-     * @param secret Shared secret
-     * @param clock  Clock responsible for retrieve the current interval
-     */
-    public Totp(String secret, Clock clock) {
-        this.secret = secret;
-        this.clock = clock;
-    }
-
-    /**
-     * Prover - To be used only on the client side
-     * Retrieves the encoded URI to generated the QRCode required by Google Authenticator
-     *
-     * @param name Account name
-     * @return Encoded URI
-     */
-    public String uri(String name) {
-        try {
-            return String.format("otpauth://totp/%s?secret=%s", URLEncoder.encode(name, "UTF-8"), secret);
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalArgumentException(e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Retrieves the current OTP
-     *
-     * @return OTP
-     */
+    public Totp(TotpConfig config) {
+    	this.key = config.secret.getBytes(Charset.forName("UTF-8"));
+        if (key.length == 20) this.hash = Hash.SHA1;
+        else if (key.length == 32) this.hash = Hash.SHA256;
+        else if (key.length == 64) this.hash = Hash.SHA512;
+        else throw new IllegalArgumentException("Key length not supported, use a key of size of 20, 32 or 64 bytes");
+        this.digits = config.digits;
+        this.delayWindow = DEFAULT_DELAY_WINDOW;
+        this.clock = config.clock;
+	}
+    
+    @Override
     public String now() {
-        return leftPadding(hash(secret, clock.getCurrentInterval()));
+    	return leftPadding(hash(clock.getCurrentInterval()), digits);
     }
 
     /**
-     * Verifier - To be used only on the server side
-     * <p/>
-     * Taken from Google Authenticator with small modifications from
-     * {@see <a href="http://code.google.com/p/google-authenticator/source/browse/src/com/google/android/apps/authenticator/PasscodeGenerator.java?repo=android#212">PasscodeGenerator.java</a>}
-     * <p/>
-     * Verify a timeout code. The timeout code will be valid for a time
-     * determined by the interval period and the number of adjacent intervals
-     * checked.
+     * This method generates a TOTP value
      *
-     * @param otp Timeout code
-     * @return True if the timeout code is valid
-     *         <p/>
-     *         Author: sweis@google.com (Steve Weis)
+     * @param time the current time in millis
+     * @return a numeric String in base 10 that includes
+     *         truncationDigits digits
      */
-    public boolean verify(String otp) {
+    private int hash(long interval) {
+        try {
+			byte[] challenge = ByteBuffer.allocate(8).putLong(interval).array();
+			byte[] calculatedHash = new Hmac(hash, this.key).digest(challenge);
 
+			// put selected bytes into result int
+			return bytesToInt(calculatedHash, digits);
+		} catch (java.security.InvalidKeyException e) {
+			e.printStackTrace();
+			return -1;
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+			return -1;
+		}
+    }
+    
+    public boolean verify(String otp) {
         long code = Long.parseLong(otp);
         long currentInterval = clock.getCurrentInterval();
 
-        int pastResponse = Math.max(DELAY_WINDOW, 0);
+        int pastResponse = Math.max(delayWindow, 0);
 
         for (int i = pastResponse; i >= 0; --i) {
-            int candidate = generate(this.secret, currentInterval - i);
+            int candidate = hash(currentInterval - i);
             if (candidate == code) {
                 return true;
             }
         }
         return false;
     }
-
-    private int generate(String secret, long interval) {
-        return hash(secret, interval);
+    
+    public static TotpConfig configure(String secret){
+    	return new TotpConfig().secret(secret);
     }
-
-    private int hash(String secret, long interval) {
-        byte[] hash = new byte[0];
-        try {
-            //Base32 encoding is just a requirement for google authenticator. We can remove it on the next releases.
-            hash = new Hmac(Hash.SHA1, Base32.decode(secret), interval).digest();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-        } catch (Base32.DecodingException e) {
-            e.printStackTrace();
-        }
-        return bytesToInt(hash);
-    }
-
-    private int bytesToInt(byte[] hash) {
-        // put selected bytes into result int
-        int offset = hash[hash.length - 1] & 0xf;
-
-        int binary = ((hash[offset] & 0x7f) << 24) |
-                ((hash[offset + 1] & 0xff) << 16) |
-                ((hash[offset + 2] & 0xff) << 8) |
-                (hash[offset + 3] & 0xff);
-
-        return binary % Digits.SIX.getValue();
-    }
-
-    private String leftPadding(int otp) {
-        return String.format("%06d", otp);
-    }
-
+    
+    public static class TotpConfig extends Config<Totp, TotpConfig> {
+		protected TotpConfig() {
+			super();
+			this.clock = new Clock();
+		}
+		
+		@Override
+		public TotpConfig self() {
+			return this;
+		}
+		
+		public Totp build() {
+			return new Totp(this);
+		}
+	}
 }

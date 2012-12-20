@@ -18,15 +18,21 @@
 package org.jboss.aerogear.security.otp.api;
 
 public enum Digits {
-    SIX(1000000), SEVEN(10000000), EIGHT(100000000);
+    ZERO(0), ONE(1), TWO(2), THREE(3), FOUR(4), FIVE(5), SIX(6), SEVEN(7), EIGHT(8);
 
     private int digits;
+    private int length;
 
-    Digits(int digits) {
-        this.digits = digits;
+    Digits( int length) {
+        this.digits = (int) Math.pow(10, length);
+        this.length = length;
     }
 
     public int getValue() {
         return digits;
+    }
+    
+    public int getLength() {
+    	return length;
     }
 }
