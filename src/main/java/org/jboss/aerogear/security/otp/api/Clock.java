@@ -23,27 +23,27 @@ import java.util.TimeZone;
 
 public class Clock {
 
-    protected final int interval;
-    private Calendar calendar;
+	protected final int interval;
+	private Calendar calendar;
 
-    public Clock() {
-        interval = 30;
-        calendar = GregorianCalendar.getInstance(TimeZone.getTimeZone("UTC"));
-    }
+	public Clock() {
+		interval = 30;
+		calendar = GregorianCalendar.getInstance(TimeZone.getTimeZone("UTC"));
+	}
 
-    public Clock(int interval) {
-        this.interval = interval;
-    }
-    
-    public long getCurrentSeconds(){
-    	return calendar.getTimeInMillis() / 1000;
-    }
+	public Clock(int interval) {
+		this.interval = interval;
+	}
 
-    public long getCurrentInterval() {
-        return getCurrentSeconds() / interval;
-    }
-    
-    public static class ExactClock extends Clock{
+	public long getCurrentSeconds() {
+		return calendar.getTimeInMillis() / 1000;
+	}
+
+	public long getCurrentInterval() {
+		return getCurrentSeconds() / interval;
+	}
+
+	public static class ExactClock extends Clock {
 		public ExactClock() {
 			super();
 		}
@@ -51,13 +51,13 @@ public class Clock {
 		public ExactClock(int interval) {
 			super(interval);
 		}
-    	
-	    public long getCurrentSeconds(){
-	    	return System.currentTimeMillis() / 1000;
-	    }
 
-	    public long getCurrentInterval() {
-	        return getCurrentSeconds() / interval;
-	    }
-    }
+		public long getCurrentSeconds() {
+			return System.currentTimeMillis() / 1000;
+		}
+
+		public long getCurrentInterval() {
+			return getCurrentSeconds() / interval;
+		}
+	}
 }

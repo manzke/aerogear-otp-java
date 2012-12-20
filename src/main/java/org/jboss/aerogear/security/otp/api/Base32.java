@@ -164,7 +164,6 @@ public class Base32 {
     }
 
     public static String random() {
-
         // Allocating the buffer
         byte[] buffer = new byte[SECRET_SIZE];
 

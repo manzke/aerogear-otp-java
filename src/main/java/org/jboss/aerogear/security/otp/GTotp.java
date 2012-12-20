@@ -31,124 +31,131 @@ import org.jboss.aerogear.security.otp.api.Hmac;
 
 public final class GTotp implements Otp {
 
-    private final String secret;
-    private final Clock clock;
-    private final Digits digits;
-    private final Hash hash;
-    private final int delayWindow;
-    private static final int DEFAULT_DELAY_WINDOW = 1;
+	private final String secret;
+	private final Clock clock;
+	private final Digits digits;
+	private final Hash hash;
+	private final int delayWindow;
+	private static final int DEFAULT_DELAY_WINDOW = 1;
 
-    /**
-     * Initialize an OTP instance with the shared secret generated on Registration process
-     *
-     * @param secret Shared secret
-     */
-    public GTotp(String secret) {
-    	this(GTotp.configure(secret));
-    }
-    
-    public GTotp(GTotpConfig config){
-    	this.secret = config.secret;
-    	this.clock = config.clock;
-    	this.digits = config.digits;
-    	this.hash = config.hash;
-    	this.delayWindow = DEFAULT_DELAY_WINDOW;
-    }
+	/**
+	 * Initialize an OTP instance with the shared secret generated on
+	 * Registration process
+	 * 
+	 * @param secret
+	 *            Shared secret
+	 */
+	public GTotp(String secret) {
+		this(GTotp.configure(secret));
+	}
 
-    /**
-     * Prover - To be used only on the client side
-     * Retrieves the encoded URI to generated the QRCode required by Google Authenticator
-     *
-     * @param name Account name
-     * @return Encoded URI
-     */
-    public String uri(String name) {
-        try {
-            return String.format("otpauth://totp/%s?secret=%s", URLEncoder.encode(name, "UTF-8"), secret);
-        } catch (UnsupportedEncodingException e) {
-            throw new IllegalArgumentException(e.getMessage(), e);
-        }
-    }
+	public GTotp(GTotpConfig config) {
+		this.secret = config.secret;
+		this.clock = config.clock;
+		this.digits = config.digits;
+		this.hash = config.hash;
+		this.delayWindow = DEFAULT_DELAY_WINDOW;
+	}
 
-    /**
-     * Retrieves the current OTP
-     *
-     * @return OTP
-     */
-    public String now() {
-        return leftPadding(hash(clock.getCurrentInterval()));
-    }
+	/**
+	 * Prover - To be used only on the client side Retrieves the encoded URI to
+	 * generated the QRCode required by Google Authenticator
+	 * 
+	 * @param name
+	 *            Account name
+	 * @return Encoded URI
+	 */
+	public String uri(String name) {
+		try {
+			return String.format("otpauth://totp/%s?secret=%s",
+					URLEncoder.encode(name, "UTF-8"), secret);
+		} catch (UnsupportedEncodingException e) {
+			throw new IllegalArgumentException(e.getMessage(), e);
+		}
+	}
 
-    /**
-     * Verifier - To be used only on the server side
-     * <p/>
-     * Taken from Google Authenticator with small modifications from
-     * {@see <a href="http://code.google.com/p/google-authenticator/source/browse/src/com/google/android/apps/authenticator/PasscodeGenerator.java?repo=android#212">PasscodeGenerator.java</a>}
-     * <p/>
-     * Verify a timeout code. The timeout code will be valid for a time
-     * determined by the interval period and the number of adjacent intervals
-     * checked.
-     *
-     * @param otp Timeout code
-     * @return True if the timeout code is valid
-     *         <p/>
-     *         Author: sweis@google.com (Steve Weis)
-     */
-    public boolean verify(String otp) {
-        long code = Long.parseLong(otp);
-        long currentInterval = clock.getCurrentInterval();
+	/**
+	 * Retrieves the current OTP
+	 * 
+	 * @return OTP
+	 */
+	public String now() {
+		return leftPadding(hash(clock.getCurrentInterval()));
+	}
 
-        int pastResponse = Math.max(delayWindow, 0);
+	/**
+	 * Verifier - To be used only on the server side
+	 * <p/>
+	 * Taken from Google Authenticator with small modifications from {@see <a
+	 * href=
+	 * "http://code.google.com/p/google-authenticator/source/browse/src/com/google/android/apps/authenticator/PasscodeGenerator.java?repo=android#212"
+	 * >PasscodeGenerator.java</a>}
+	 * <p/>
+	 * Verify a timeout code. The timeout code will be valid for a time
+	 * determined by the interval period and the number of adjacent intervals
+	 * checked.
+	 * 
+	 * @param otp
+	 *            Timeout code
+	 * @return True if the timeout code is valid
+	 *         <p/>
+	 *         Author: sweis@google.com (Steve Weis)
+	 */
+	public boolean verify(String otp) {
+		long code = Long.parseLong(otp);
+		long currentInterval = clock.getCurrentInterval();
 
-        for (int i = pastResponse; i >= 0; --i) {
-            int candidate = hash(currentInterval - i);
-            if (candidate == code) {
-                return true;
-            }
-        }
-        return false;
-    }
+		int pastResponse = Math.max(delayWindow, 0);
 
-    private int hash(long interval) {
-        byte[] bytes = new byte[0];
-        try {
-            //Base32 encoding is just a requirement for google authenticator. We can remove it on the next releases.
-        	byte[] challenge = ByteBuffer.allocate(8).putLong(interval).array();
-        	bytes = new Hmac(hash, Base32.decode(secret)).digest(challenge);
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-            return -1;
-        } catch (InvalidKeyException e) {
-            e.printStackTrace();
-            return -1;
-        } catch (Base32.DecodingException e) {
-            e.printStackTrace();
-            return -1;
-        }
-        
-        return bytesToInt(bytes);
-    }
+		for (int i = pastResponse; i >= 0; --i) {
+			int candidate = hash(currentInterval - i);
+			if (candidate == code) {
+				return true;
+			}
+		}
+		return false;
+	}
 
-    private int bytesToInt(byte[] hash) {
-        // put selected bytes into result int
-        int offset = hash[hash.length - 1] & 0xf;
+	private int hash(long interval) {
+		byte[] bytes = new byte[0];
+		try {
+			// Base32 encoding is just a requirement for google authenticator.
+			// We can remove it on the next releases.
+			byte[] challenge = ByteBuffer.allocate(8).putLong(interval).array();
+			bytes = new Hmac(hash, Base32.decode(secret)).digest(challenge);
+		} catch (NoSuchAlgorithmException e) {
+			e.printStackTrace();
+			return -1;
+		} catch (InvalidKeyException e) {
+			e.printStackTrace();
+			return -1;
+		} catch (Base32.DecodingException e) {
+			e.printStackTrace();
+			return -1;
+		}
 
-        int binary = ((hash[offset] & 0x7f) << 24) |
-                ((hash[offset + 1] & 0xff) << 16) |
-                ((hash[offset + 2] & 0xff) << 8) |
-                (hash[offset + 3] & 0xff);
+		return bytesToInt(bytes);
+	}
 
-        return binary % digits.getValue();
-    }
+	private int bytesToInt(byte[] hash) {
+		// put selected bytes into result int
+		int offset = hash[hash.length - 1] & 0xf;
 
-    private String leftPadding(int otp) {
-        return String.format("%0"+digits.getLength()+"d", otp);
-    }
-    
-    public static GTotpConfig configure(String secret){
-    	return new GTotpConfig().secret(secret);
-    }
-    
+		int binary = ((hash[offset] & 0x7f) << 24)
+				| ((hash[offset + 1] & 0xff) << 16)
+				| ((hash[offset + 2] & 0xff) << 8) | (hash[offset + 3] & 0xff);
+
+		return binary % digits.getValue();
+	}
+
+	private String leftPadding(int otp) {
+		return String.format("%0" + digits.getLength() + "d", otp);
+	}
+
+	public static GTotpConfig configure(String secret) {
+		return new GTotpConfig().secret(secret);
+	}
+
 	public static class GTotpConfig extends Config<GTotp, GTotpConfig> {
 		protected GTotpConfig() {
 			super();
@@ -156,13 +163,13 @@ public final class GTotp implements Otp {
 			this.hash = Hash.SHA1;
 			this.clock = new Clock();
 		}
-		
+
 		@Override
 		public GTotpConfig self() {
 			return this;
 		}
-		
-		public GTotp build(){
+
+		public GTotp build() {
 			return new GTotp(this);
 		}
 	}
