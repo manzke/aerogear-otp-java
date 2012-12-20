@@ -156,7 +156,7 @@ public final class GTotp implements Otp {
 		return new GTotpConfig().secret(secret);
 	}
 
-	public static class GTotpConfig extends Config<GTotp, GTotpConfig> {
+	public static class GTotpConfig extends OtpConfig<GTotp, GTotpConfig> {
 		protected GTotpConfig() {
 			super();
 			this.digits = Digits.SIX;

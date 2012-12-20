@@ -102,7 +102,7 @@ public class Totp implements Otp {
 		return new TotpConfig().secret(secret);
 	}
 
-	public static class TotpConfig extends Config<Totp, TotpConfig> {
+	public static class TotpConfig extends OtpConfig<Totp, TotpConfig> {
 		protected TotpConfig() {
 			super();
 			this.clock = new Clock();

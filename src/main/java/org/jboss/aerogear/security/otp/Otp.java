@@ -9,13 +9,13 @@ public interface Otp {
 
 	boolean verify(String otp);
 
-	public static abstract class Config<OtpType extends Otp, ConfigType extends Config<OtpType, ConfigType>> {
+	public static abstract class OtpConfig<OtpType extends Otp, ConfigType extends OtpConfig<OtpType, ConfigType>> {
 		protected Digits digits = Digits.SIX;
 		protected Hash hash = Hash.SHA1;
 		protected String secret;
 		protected Clock clock = new Clock();
 
-		public static <OtpType extends Otp, ConfigType extends Config<OtpType, ConfigType>> ConfigType type(
+		public static <OtpType extends Otp, ConfigType extends OtpConfig<OtpType, ConfigType>> ConfigType type(
 				Class<ConfigType> type) throws InstantiationException {
 			try {
 				return type.newInstance();
@@ -24,7 +24,7 @@ public interface Otp {
 			}
 		}
 
-		protected Config() {
+		protected OtpConfig() {
 		}
 
 		public abstract ConfigType self();

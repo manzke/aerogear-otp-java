@@ -3,7 +3,7 @@ package org.jboss.aerogear.security.otp;
 import static junit.framework.Assert.assertEquals;
 import static org.mockito.Mockito.when;
 
-import org.jboss.aerogear.security.otp.Otp.Config;
+import org.jboss.aerogear.security.otp.Otp.OtpConfig;
 import org.jboss.aerogear.security.otp.Totp.TotpConfig;
 import org.jboss.aerogear.security.otp.api.Clock;
 import org.jboss.aerogear.security.otp.api.Digits;
@@ -24,7 +24,7 @@ public class TotpTest {
     @Before
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
-        config = Config.type(TotpConfig.class).clock(clock).digits(Digits.EIGHT);
+        config = OtpConfig.type(TotpConfig.class).clock(clock).digits(Digits.EIGHT);
     }
     
     private void setTimeTo(long milliseconds) {

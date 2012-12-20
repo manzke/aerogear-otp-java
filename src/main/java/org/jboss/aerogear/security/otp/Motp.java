@@ -123,7 +123,7 @@ public class Motp implements Otp {
 		return new MotpConfig().pin(pin).secret(secret);
 	}
 
-	public static class MotpConfig extends Config<Motp, MotpConfig> {
+	public static class MotpConfig extends OtpConfig<Motp, MotpConfig> {
 		private String pin;
 
 		protected MotpConfig() {
