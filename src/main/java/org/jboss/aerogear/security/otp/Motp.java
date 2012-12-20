@@ -18,9 +18,10 @@
 package org.jboss.aerogear.security.otp;
 
 import java.io.UnsupportedEncodingException;
-import java.security.MessageDigest;
+import java.nio.charset.Charset;
 import java.security.NoSuchAlgorithmException;
 
+import org.jboss.aerogear.security.otp.Otp.OtpAdapter;
 import org.jboss.aerogear.security.otp.api.Clock;
 import org.jboss.aerogear.security.otp.api.Digits;
 import org.jboss.aerogear.security.otp.api.Hash;
@@ -29,15 +30,8 @@ import org.jboss.aerogear.security.otp.api.Hex;
 /**
  * @author Daniel Manzke
  */
-public class Motp implements Otp {
-
-	private final String secret;
-	private final Clock clock;
+public class Motp extends OtpAdapter {
 	private final String pin;
-	private final Hash hash;
-	private final Digits digits;
-	private final int delayWindow;
-	private static final int DEFAULT_DELAY_WINDOW = 3; 
 
 	/**
 	 * Initialize an OTP instance with the shared secret generated on
@@ -51,12 +45,8 @@ public class Motp implements Otp {
 	}
 
 	public Motp(MotpConfig config) {
-		this.secret = config.secret;
-		this.clock = config.clock;
-		this.hash = config.hash;
+		super(config);
 		this.pin = config.pin;
-		this.digits = config.digits;
-		this.delayWindow = DEFAULT_DELAY_WINDOW;
 	}
 
 	/**
@@ -66,8 +56,9 @@ public class Motp implements Otp {
 	 * @throws NoSuchAlgorithmException
 	 * @throws UnsupportedEncodingException
 	 */
+	@Override
 	public String now() {
-		return generate(clock.getCurrentSeconds());
+		return hash(clock.getCurrentSeconds());
 	}
 
 	/**
@@ -88,26 +79,11 @@ public class Motp implements Otp {
 	 *         <p/>
 	 *         Author: sweis@google.com (Steve Weis)
 	 */
-	public boolean verify(String otp) {
-		long currentSeconds = clock.getCurrentSeconds();
-
-		int pastResponse = Math.max(delayWindow, 0) * 10;
-
-		for (int i = pastResponse; i >= 0; i = i - 10) {
-			String candidate = generate(currentSeconds - i);
-			if (otp.equalsIgnoreCase(candidate)) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	private String generate(long epoch) {
+	@Override
+	protected String hash(long epoch) {
 		try {
-			String base = Long.toString(epoch / 10) + secret + pin;
-			MessageDigest digest = MessageDigest.getInstance(hash.toString());
-			byte[] bytes = digest.digest(base.getBytes("UTF-8"));
+			String base = Long.toString(epoch / 10) + new String(key, Charset.forName("UTF-8")) + pin;
+			byte[] bytes = hash.digest(base.getBytes("UTF-8"));
 
 			return Hex.encode(bytes).substring(0, digits.getLength());
 		} catch (NoSuchAlgorithmException e) {
@@ -117,6 +93,22 @@ public class Motp implements Otp {
 			e.printStackTrace();
 			return "";
 		}
+	}
+	
+	@Override
+	public boolean verify(String otp) {
+		long currentSeconds = clock.getCurrentSeconds();
+
+		int pastResponse = Math.max(delayWindow, 0) * 10;
+
+		for (int i = pastResponse; i >= 0; i = i - 10) {
+			String candidate = hash(currentSeconds - i);
+			if (otp.equalsIgnoreCase(candidate)) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	public static MotpConfig configure(String pin, String secret) {
@@ -131,10 +123,17 @@ public class Motp implements Otp {
 			this.hash = Hash.MD5;
 			this.clock = new Clock();
 			this.digits = Digits.SIX;
+			this.tolerance = 3;
 		}
 
 		public MotpConfig pin(String pin) {
 			this.pin = pin;
+			return this;
+		}
+		
+		@Override
+		public MotpConfig secret(String secret) {
+			this.key = secret.getBytes(Charset.forName("UTF-8"));
 			return this;
 		}
 

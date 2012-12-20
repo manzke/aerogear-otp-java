@@ -33,9 +33,9 @@ import static junit.framework.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.when;
 
-public class GotpTest {
+public class GTotpTest {
 
-    private final static Logger LOGGER = Logger.getLogger(GotpTest.class.getName());
+    private final static Logger LOGGER = Logger.getLogger(GTotpTest.class.getName());
 
     @Mock
     private Clock clock;
@@ -66,7 +66,7 @@ public class GotpTest {
     }
 
     @Test
-    public void testUriEncoding() {
+    public void testUriEncoding() throws Exception {
     	GTotp totp = new GTotp(sharedSecret);
         String url = String.format("otpauth://totp/%s?secret=%s", "john%23doe", sharedSecret);
         assertEquals(url, totp.uri("john#doe"));

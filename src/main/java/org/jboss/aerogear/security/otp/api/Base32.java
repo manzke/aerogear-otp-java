@@ -70,11 +70,11 @@ public class Base32 {
         }
     }
 
-    public static byte[] decode(String encoded) throws DecodingException {
+    public static byte[] decode(String encoded) {
         return getInstance().decodeInternal(encoded);
     }
 
-    public byte[] decodeInternal(String encoded) throws DecodingException {
+    public byte[] decodeInternal(String encoded) {
         // Remove whitespace and separators
         encoded = encoded.trim().replaceAll(SEPARATOR, "").replaceAll(" ", "");
 
@@ -96,7 +96,7 @@ public class Base32 {
         int bitsLeft = 0;
         for (char c : encoded.toCharArray()) {
             if (!CHAR_MAP.containsKey(c)) {
-                throw new DecodingException("Illegal character: " + c);
+                throw new IllegalArgumentException("Illegal character: " + c);
             }
             buffer <<= SHIFT;
             buffer |= CHAR_MAP.get(c) & MASK;
@@ -153,14 +153,6 @@ public class Base32 {
             result.append(DIGITS[index]);
         }
         return result.toString();
-    }
-
-    public static class DecodingException extends Exception {
-		private static final long serialVersionUID = -5684267668478052752L;
-
-		public DecodingException(String message) {
-            super(message);
-        }
     }
 
     public static String random() {
