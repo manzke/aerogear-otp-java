@@ -46,7 +46,7 @@ public class GotpTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         when(clock.getCurrentInterval()).thenReturn(addElapsedTime(0));
-        totp = new GTotp(sharedSecret, clock);
+        totp = GTotp.configure(sharedSecret).clock(clock).build();
     }
 
     private long addElapsedTime(int seconds) {
@@ -78,8 +78,7 @@ public class GotpTest {
 
         when(clock.getCurrentInterval()).thenReturn(45187109L);
         String secret = "R5MB5FAQNX5UIPWL";
-
-        GTotp totp = new GTotp(secret, clock);
+        GTotp totp = GTotp.configure(secret).clock(clock).build();
         String otp = totp.now();
         assertEquals("Generated token must be zero padded", expected, otp);
         assertTrue("Generated token must be valid", totp.verify(otp));

@@ -44,21 +44,7 @@ public final class GTotp implements Otp {
      * @param secret Shared secret
      */
     public GTotp(String secret) {
-    	this(secret, new Clock());
-    }
-
-    /**
-     * Initialize an OTP instance with the shared secret generated on Registration process
-     *
-     * @param secret Shared secret
-     * @param clock  Clock responsible for retrieve the current interval
-     */
-    public GTotp(String secret, Clock clock) {
-        this.secret = secret;
-        this.digits = Digits.SIX;
-        this.hash = Hash.SHA1;
-        this.clock = clock;
-        this.delayWindow = DEFAULT_DELAY_WINDOW;
+    	this(GTotp.configure(secret));
     }
     
     public GTotp(GTotpConfig config){

@@ -17,6 +17,7 @@
 
 package org.jboss.aerogear.security.otp;
 
+import org.jboss.aerogear.security.otp.Motp.MotpConfig;
 import org.jboss.aerogear.security.otp.api.Clock;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,6 +41,7 @@ public class MotpTest {
     @Mock
     private Clock clock;
     private Motp motp;
+    private MotpConfig config;
     private String sharedSecret = "B2374TNIQ3HKC446";
     private String pin = "1234";
 
@@ -47,7 +49,8 @@ public class MotpTest {
     public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         when(clock.getCurrentSeconds()).thenReturn(addElapsedTime(0));
-        motp = new Motp(pin, sharedSecret, clock);
+        config = Motp.configure(pin, sharedSecret).clock(clock);
+        motp = config.build();
     }
 
     private long addElapsedTime(int seconds) {
@@ -76,7 +79,7 @@ public class MotpTest {
     	String secret = "31740cc7f06a10e3";
     	String expectedOtp = "6f9edf";
     	when(clock.getCurrentSeconds()).thenReturn(1356021826l);
-        motp = new Motp(pin, secret, clock);
+    	motp = config.secret(secret).build();
         String otp = motp.now();
         
         assertEquals("OTP is not the expected one", expectedOtp, otp);
@@ -89,7 +92,7 @@ public class MotpTest {
     	String expectedOtp = "500bdb";
     	
     	when(clock.getCurrentSeconds()).thenReturn(1356022055l);
-        motp = new Motp(pin, secret, clock);
+    	motp = config.secret(secret).build();
         String otp = motp.now();
         assertEquals("OTP is not the expected one", expectedOtp, otp);
         assertTrue("OTP is not valid", motp.verify(otp));

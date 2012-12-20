@@ -22,6 +22,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 import org.jboss.aerogear.security.otp.api.Clock;
+import org.jboss.aerogear.security.otp.api.Digits;
 import org.jboss.aerogear.security.otp.api.Hash;
 import org.jboss.aerogear.security.otp.api.Hex;
 
@@ -34,6 +35,7 @@ public class Motp implements Otp {
     private final Clock clock;
 	private final String pin;
 	private final Hash hash;
+	private final Digits digits;
 	private final int delayWindow;
     private static final int DEFAULT_DELAY_WINDOW = 3; //latest 60 seconds -> motp.sourceforge.net tells 3 minutes past/future
 
@@ -43,17 +45,7 @@ public class Motp implements Otp {
      * @param secret Shared secret
      */
     public Motp(String pin, String secret) {
-    	this(pin, secret, new Clock());
-    }
-
-    /**
-     * Initialize an OTP instance with the shared secret generated on Registration process
-     *
-     * @param secret Shared secret
-     * @param clock  Clock responsible for retrieve the current interval
-     */
-    public Motp(String pin, String secret, Clock clock) {
-    	this((MotpConfig) new MotpConfig().pin(pin).secret(secret).clock(clock));
+    	this(Motp.configure(secret, pin));
     }
     
     public Motp(MotpConfig config){
@@ -61,6 +53,7 @@ public class Motp implements Otp {
     	this.clock = config.clock;
     	this.hash = config.hash;
     	this.pin = config.pin;
+    	this.digits = config.digits;
     	this.delayWindow = DEFAULT_DELAY_WINDOW;
     }
 
@@ -112,7 +105,7 @@ public class Motp implements Otp {
 			MessageDigest digest = MessageDigest.getInstance(hash.toString());
 			byte[] bytes = digest.digest(base.getBytes("UTF-8"));
 			
-			return Hex.encode(bytes).substring(0,6);
+			return Hex.encode(bytes).substring(0, digits.getLength());
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
 			return "";
@@ -122,7 +115,7 @@ public class Motp implements Otp {
 		}
     }
     
-    public static MotpConfig configure(String secret, String pin){
+    public static MotpConfig configure(String pin, String secret){
     	return new MotpConfig().pin(pin).secret(secret);
     }
     
@@ -132,6 +125,7 @@ public class Motp implements Otp {
 			super();
 			this.hash = Hash.MD5;
 			this.clock = new Clock();
+			this.digits = Digits.SIX;
 		}
 		
 		public MotpConfig pin(String pin){
