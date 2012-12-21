@@ -1,16 +1,20 @@
 package org.jboss.aerogear.security.otp.api;
 
 public class Hex {
-	public static String encode(byte buf[]) {
-		StringBuilder strbuf = new StringBuilder(buf.length * 2);
-		int i;
+	public static final char[] DIGITS = { '0', '1', '2', '3', '4', '5', '6',
+		'7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
-		for (i = 0; i < buf.length; i++) {
-			if (((int) buf[i] & 0xff) < 0x10)
-				strbuf.append("0");
-			strbuf.append(Long.toString((int) buf[i] & 0xff, 16));
+	public static String encode(byte[] raw) {
+		int length = raw.length;
+		char[] hex = new char[length * 2];
+		for (int i = 0; i < length; i++) {
+			int value = (raw[i] + 256) % 256;
+			int highIndex = value >> 4;
+			int lowIndex = value & 0x0f;
+			int j = i * 2;
+			hex[j + 0] = DIGITS[highIndex];
+			hex[j + 1] = DIGITS[lowIndex];
 		}
-
-		return strbuf.toString();
+		return new String(hex);
 	}
 }
