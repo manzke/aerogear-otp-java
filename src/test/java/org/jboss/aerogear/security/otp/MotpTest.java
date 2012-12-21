@@ -80,10 +80,8 @@ public class MotpTest {
     	String expectedOtp = "6f9edf";
     	when(clock.getCurrentSeconds()).thenReturn(1356021826l);
     	motp = config.secret(secret).build();
-        String otp = motp.now();
         
-        assertEquals("OTP is not the expected one", expectedOtp, otp);
-        assertTrue("OTP is not valid", motp.verify(otp));
+        assertTrue("OTP is not valid", motp.verify(expectedOtp));
     }
     
     @Test
@@ -93,9 +91,8 @@ public class MotpTest {
     	
     	when(clock.getCurrentSeconds()).thenReturn(1356022055l);
     	motp = config.secret(secret).build();
-        String otp = motp.now();
-        assertEquals("OTP is not the expected one", expectedOtp, otp);
-        assertTrue("OTP is not valid", motp.verify(otp));
+
+        assertTrue("OTP is not valid", motp.verify(expectedOtp));
     }
 
 
