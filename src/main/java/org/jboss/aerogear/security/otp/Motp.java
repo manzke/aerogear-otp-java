@@ -97,13 +97,15 @@ public class Motp extends OtpAdapter {
 	
 	@Override
 	public boolean verify(String otp) {
+		//make sure everything is in uppercase
+		otp = otp.toUpperCase();
 		long currentSeconds = clock.getCurrentSeconds();
 
 		int pastResponse = Math.max(delayWindow, 0) * 10;
 
 		for (int i = pastResponse; i >= 0; i = i - 10) {
 			String candidate = hash(currentSeconds - i);
-			if (otp.equalsIgnoreCase(candidate)) {
+			if (otp.equals(candidate)) {
 				return true;
 			}
 		}

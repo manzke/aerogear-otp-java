@@ -63,13 +63,15 @@ public interface Otp {
 		 *         Author: sweis@google.com (Steve Weis)
 		 */
 		public boolean verify(String otp) {
+			//make sure everything is in uppercase
+			otp = otp.toUpperCase();
 			long currentInterval = clock.getCurrentInterval();
 
 			int pastResponse = Math.max(delayWindow, 0);
 
 			for (int i = pastResponse; i >= 0; --i) {
 				String candidate = hash(currentInterval - i);
-				if (otp.equalsIgnoreCase(candidate)) {
+				if (otp.equals(candidate)) {
 					return true;
 				}
 			}
